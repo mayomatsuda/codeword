@@ -28,10 +28,6 @@ const Game = () => {
   const text = queryParams.get('text');
   const number = queryParams.get('number');
 
-  const selectRandomWords = (list, count) => {
-    return list.sort(() => 0.5 - Math.random()).slice(0, count);
-  };
-
   const handleTileClick = (index) => {
     if (showColors || gameOver) return;
 
@@ -45,7 +41,7 @@ const Game = () => {
         setTimeout(() => {
           setGameOver(true);
           alert('Game Over!');
-        }, 500); // Delay of 1000 milliseconds (1 second)
+        }, 500); // Delay 1 second
       } else {
         setGuessesRemaining(guessesRemaining - 1);
         if (guessesRemaining - 1 === 0) {
@@ -107,6 +103,7 @@ const Game = () => {
         setGuessesRemaining(parseInt(number, 10));
     }
 
+    // Get today's words
     const fetchPost = async () => {
       const docRef = doc(firestore, "words", getCurrentDate());
       const docSnap = await getDoc(docRef);
