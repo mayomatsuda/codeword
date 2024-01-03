@@ -13,12 +13,12 @@ const Tile = ({ label, color, onClick, isFlipped, showColor }) => {
       let currentFontSize = 16; // Start with the base font size
       tile.style.fontSize = `${currentFontSize}px`;
 
-      if (tile.scrollWidth + 1 > tile.offsetWidth) {
+      if (tile.scrollWidth > tile.offsetWidth) {
         currentFontSize = Math.max(currentFontSize - (tile.scrollWidth - tile.offsetWidth + 1), 12);
         tile.style.fontSize = `${currentFontSize}px`;
       }
 
-      if (tile.scrollHeight + 1 > tile.offsetHeight) {
+      if (tile.scrollHeight > tile.offsetHeight) {
         currentFontSize = Math.max(currentFontSize - (tile.scrollHeight - tile.offsetHeight + 1), 12);
         tile.style.fontSize = `${currentFontSize}px`;
       }
@@ -27,7 +27,16 @@ const Tile = ({ label, color, onClick, isFlipped, showColor }) => {
     };
 
     adjustFontSize();
-    // Optionally, add a resize listener to adjust font size on window resize
+
+    const handleResize = () => {
+      adjustFontSize();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+
   }, [label]); // Depend only on 'label'
   
   const textStyle = {
@@ -41,9 +50,9 @@ const Tile = ({ label, color, onClick, isFlipped, showColor }) => {
   };
 
   const tileStyle = {
-    height: '100px',
-    width: '100px',
-    margin: '10px',
+    height: 'min(19vw, 15vh)',
+    width: 'min(19vw, 15vh)',
+    margin: '7px',
     perspective: '1000px',
     cursor: 'pointer',
     userSelect: 'none',

@@ -14,7 +14,7 @@ const generateInitialColors = () => {
 };
 
 const Game = () => {
-  const [colors, setColors] = useState(generateInitialColors());
+  const [colors, setColors] = useState([]);
   const [showColors, setShowColors] = useState(true);
   const [inputText, setInputText] = useState('');
   const [inputNumber, setInputNumber] = useState(0);
@@ -29,27 +29,43 @@ const Game = () => {
   const number = queryParams.get('number');
 
   const handleTileClick = (index) => {
-    if (showColors || gameOver) return;
+    if (showColors || gameOver || guessesRemaining <= 0) return;
 
     // Reveal the tile
     const newRevealedTiles = [...revealedTiles];
     newRevealedTiles[index] = true;
     setRevealedTiles(newRevealedTiles);
 
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const revealAllTiles = async () => {
+      for (let i = 0; i < revealedTiles.length; i++) {
+        setRevealedTiles(prevTiles => {
+          const newTiles = [...prevTiles];
+          newTiles[i] = true; // Set the tile to be revealed
+          return newTiles;
+        });
+
+        await sleep(50);
+      }
+    }
+
     // Game logic
     if (colors[index] === 'red') {
+      setTimeout(() => {
+        setGameOver(true);
+        alert('Game Over!');
+        revealAllTiles();
+      }, 500); // Delay 1 second
+    } else {
+      setGuessesRemaining(guessesRemaining - 1);
+      if (guessesRemaining - 1 === 0) {
         setTimeout(() => {
-          setGameOver(true);
-          alert('Game Over!');
-        }, 500); // Delay 1 second
-      } else {
-        setGuessesRemaining(guessesRemaining - 1);
-        if (guessesRemaining - 1 === 0) {
-          setTimeout(() => {
-            alert('You Win!');
-          }, 500);
-        }
+          alert('You Win!');
+          revealAllTiles();
+        }, 500);
       }
+    }
   };
 
   const handleInputChange = (e) => {
@@ -59,11 +75,14 @@ const Game = () => {
   const handleNumberChange = (e) => setInputNumber(e.target.value);
 
   const generateURL = () => {
+    const colorData = JSON.stringify(colors.join(','));  
+    const encodedColors = btoa(colorData);
+    
     const url = new URL(window.location.href);
     url.searchParams.set('mode', 'play');
     url.searchParams.set('text', inputText);
     url.searchParams.set('number', inputNumber);
-    url.searchParams.set('colors', colors.join(','));
+    url.searchParams.set('colors', encodedColors);
     return url.href;
   };
 
@@ -95,12 +114,36 @@ const Game = () => {
     const number = params.get('number');
     const colorsFromUrl = params.get('colors');
 
+    const shouldResetColors = (lastSetDate) => {
+      const today = new Date();
+      const lastSet = new Date(lastSetDate);
+      return lastSet.getDate() !== today.getDate() ||
+             lastSet.getMonth() !== today.getMonth() ||
+             lastSet.getFullYear() !== today.getFullYear();
+    };
+
+    if (mode !== 'play') {
+      const cachedColors = localStorage.getItem('tileColors');
+      const lastSetColorDate = localStorage.getItem('lastSetColorDate');
+
+      if (cachedColors && lastSetColorDate && !shouldResetColors(lastSetColorDate)) {
+        setColors(JSON.parse(cachedColors));
+      } else {
+        const newColors = generateInitialColors();
+        setColors(newColors);
+        localStorage.setItem('tileColors', JSON.stringify(newColors));
+        localStorage.setItem('lastSetColorDate', new Date().toISOString());
+      }
+    }
+
     if (mode === 'play' && text && number && colorsFromUrl) {
-        setInputText(text);
-        setInputNumber(number);
-        setColors(colorsFromUrl.split(','));
-        setShowColors(false);
-        setGuessesRemaining(parseInt(number, 10));
+      const decodedColors = JSON.parse(atob(colorsFromUrl));
+
+      setInputText(text);
+      setInputNumber(number);
+      setColors(decodedColors.split(','));
+      setShowColors(false);
+      setGuessesRemaining(parseInt(number, 10));
     }
 
     // Get today's words
@@ -115,7 +158,7 @@ const Game = () => {
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh'}}>
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
@@ -136,8 +179,8 @@ const Game = () => {
       {!isPlayMode && (
         <div style={formContainerStyle}>
         <div style={inputsContainerStyle}>
-          <input type="text" value={inputText} onChange={handleInputChange} placeholder="ENTER HINT" style={inputStyle} />
-          <input type="number" value={inputNumber} onChange={handleNumberChange} placeholder="Enter number" style={{...inputStyle, width: '80px'}} />
+          <input type="text" value={inputText} onChange={handleInputChange} placeholder="ENTER HINT" style={{...inputStyle, width: 'min(35vw, 35vh)'}} />
+          <input type="number" value={inputNumber} onChange={handleNumberChange} placeholder="Enter number" style={{...inputStyle, width: 'min(5vw, 5vh)'}} />
           <button onClick={copyToClipboard} style={buttonStyle}>SUBMIT</button>
         </div>
         </div>
